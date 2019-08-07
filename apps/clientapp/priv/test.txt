@@ -1,0 +1,9 @@
+first_name;last_name;age;description;gender
+
+"Max";Pushkar;37;"i am ; \"super 
+star\" ololo
+ジャパンファウンデーション
+ddd";M
+
+Dima;"Smir nov ; ジャパンフ";39;"man
+cool\"";M
