@@ -25,13 +25,23 @@ start_link() ->
 %%%===================================================================
 
 init(_Args) ->
-    SupervisorSpecification = #{
-        strategy => one_for_one,
-        intensity => 10000,
-        period => 60},
+    SupervisorSpecification = 
+        #{
+            strategy => one_for_one,
+            intensity => 10000,
+            period => 60
+        },
 
     ChildSpecifications =
         [
+%            #{
+%                id => gen_server_1,
+%                start => {gen_server_1, start_link, [?MODULE]},
+%                restart => permanent,
+%                shutdown => 2000,
+%                type => worker,
+%                modules => [gen_server_1]
+%             }
         ],
     {ok, {SupervisorSpecification, ChildSpecifications}}.
 
