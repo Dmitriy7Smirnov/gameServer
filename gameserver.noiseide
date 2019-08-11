@@ -1,8 +1,8 @@
 apps_dir: !!python/unicode 'apps'
 compiler_options: !!python/unicode ''
 consoles:
-  !!python/unicode 'main': {command: !!python/unicode '', cookie: !!python/unicode '123',
-    params: !!python/unicode '', sname: !!python/unicode 'sname'}
+  !!python/unicode 'main': {command: !!python/unicode 'application:ensure_all_started(startgameapp).',
+    cookie: !!python/unicode '123', params: !!python/unicode '', sname: !!python/unicode 'sname'}
 deps_dir: !!python/unicode 'deps'
 erlang_project_type: Multiple apps
 excluded_dirs: []
