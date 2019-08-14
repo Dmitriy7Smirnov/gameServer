@@ -12,14 +12,17 @@
     start/0,
     start/1,
     server/1,
-    accept/2
+    accept/2,
+    auth_map/0
 ]).
+
+
 
 start() ->
     start(1234),
     receive
-        Msg ->
-            Msg
+        _Msg ->
+            77
     end.
 
 start(Port) ->
@@ -36,32 +39,52 @@ server(Port) ->
 accept(Id, ListenSocket) ->
     io:format("Socket #~p wait for client~n", [Id]),
     {ok, Socket} = gen_tcp:accept(ListenSocket),
-    io:format("Socket #~p, session started~n", [Id]),
-    handle_connection(Id, ListenSocket, Socket).
+    io:format("Socket #~p, session started, input login:~n", [Id]),
+    AuthState = auth_map(),
+    handle_connection(Id, ListenSocket, Socket, AuthState).
 
-%handle_connection(Id, ListenSocket) ->
-%    receive
-%        {tcp, Socket, Msg} ->
-%            io:format("Socket #~p got message: ~p~n", [Id, Msg]),
-%            gen_tcp:send(Socket, Msg),
-%            handle_connection(Id, ListenSocket);
-%        {tcp_closed, _Socket} ->
-%            io:format("Socket #~p, session closed ~n", [Id]),
-%            accept(Id, ListenSocket)
-%    end.
 
-handle_connection(Id, ListenSocket, Socket) ->
+handle_connection(Id, ListenSocket, Socket, AuthState) ->
     case gen_tcp:recv(Socket, 2) of
         {ok, Header} -> <<Size:16/integer>> = Header,
                         {ok, Msg} = gen_tcp:recv(Socket, Size),
                         io:format("Socket #~p got message: ~p~n", [Id, Msg]),
-                        gen_tcp:send(Socket, Msg),
-                        handle_connection(Id, ListenSocket, Socket);
+                        Msg1 = binary_to_list(Msg),
+                        AuthState1 = case maps:find(islogined, AuthState) of
+                            {ok, false} ->
+                                case maps:find(logincorrect, AuthState) of 
+                                    {ok, false} -> case maps:find(login, AuthState) of
+                                                       {ok, Msg1} -> gen_tcp:send(Socket, <<"input password">>),
+                                                       maps:update(logincorrect, true, AuthState);
+                                                       _NotCorrect -> gen_tcp:send(Socket, <<"try login again:">>),
+                                                        AuthState
+                                                   end;
+                                    {ok, true} -> case maps:find(password, AuthState) of
+                                                       {ok, Msg1} -> gen_tcp:send(Socket, <<"you are logined">>),
+                                                       AuthStateTemp = maps:update(passwordcorrect, true, AuthState),
+                                                       maps:update(islogined, true, AuthStateTemp);
+                                                       _NotCorrect -> gen_tcp:send(Socket, <<"try password again:">>),
+                                                       AuthState
+                                                   end         
+                                end;
+                             {ok, true} -> gen_tcp:send(Socket, <<"You are logged yet">>),
+                                           AuthState;
+                                    _Any ->
+                                           AuthState
+                         end,   
+                        handle_connection(Id, ListenSocket, Socket, AuthState1);
         {error, closed} ->
             io:format("Socket #~p, session closed ~n", [Id]),
             accept(Id, ListenSocket)
     end.
 
 
-
+auth_map() -> #{
+        login => "Maksik",
+        logincorrect => false,
+        password => "kleviy",
+        passwordcorrect => false,
+        islogined => false
+    
+    }.
 
