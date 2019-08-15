@@ -10,7 +10,8 @@
 -export([
     start/0,
     start/2,
-    send/2,
+    login/3,
+    send_text/2,
     stop/1,
     client/2
 ]).
@@ -22,8 +23,12 @@ start() ->
 start(Host, Port) ->
     spawn(?MODULE, client, [Host, Port]).
 
-send(Pid, Msg) ->
-    Pid ! {send, Msg},
+login(Pid, Username, Password) ->
+    Pid ! {login, Username, Password},
+    ok.
+
+send_text(Pid, Text) ->
+    Pid ! {text, Text},
     ok.
 
 stop(Pid) ->
@@ -31,29 +36,38 @@ stop(Pid) ->
     ok.
 
 client(Host, Port) ->
-    io:format("Client ~p connects to ~p:~p~n", [self(), Host, Port]),
+    io:format("CLIENT: pid = ~p connects to ~s:~p~n", [self(), Host, Port]),
     {ok, Socket} = gen_tcp:connect(Host, Port, [binary, {active, true}, {packet, raw}]),
     loop(Socket).
 
 loop(Socket) ->
     receive
-        {send, Msg} ->
-            io:format("Client ~p send ~p~n", [self(), Msg]),
-            Size = byte_size(Msg),
-            Header = <<Size:16/integer>>,
-            gen_tcp:send(Socket, <<Header/binary, Msg/binary>>),
+        {login, Username, Password} ->
+            PackedUsername = proto:pack(string, Username),
+            PackedPassword = proto:pack(string, Password),
+            send(Socket, <<PackedUsername/binary, PackedPassword/binary>>),
+            io:format("CLIENT: trying to login as \"~s\" with password \"~s\"~n", [Username, Password]),
+            loop(Socket);
+        {text, Text} ->
+            send(Socket, proto:pack(string, Text)),
+            io:format("CLIENT: sending text ~s~n", [Text]),
             loop(Socket);
         {tcp, Socket, Msg} ->
-            io:format("Client ~p got message: ~p~n", [self(), Msg]),
+            Text = recv(Msg),
+            io:format("CLIENT: got message: ~s~n", [Text]),
             loop(Socket);
         stop ->
-            io:format("Client ~p closes connection and stops~n", [self()]),
+            io:format("CLIENT: close connection and stop~n", []),
             gen_tcp:close(Socket)
-    after 200 ->
-            loop(Socket)
+    after
+        200 -> loop(Socket)
     end.
 
+recv(<<DataSize:16/integer, Data:DataSize/binary>>) ->
+    {Text, _} = proto:parse(string, Data),
+    Text.
 
-
-
-
+send(Socket, Data) ->
+    DataSize = byte_size(Data),
+    Packet = <<DataSize:16/integer, Data/binary>>,
+    gen_tcp:send(Socket, Packet).
