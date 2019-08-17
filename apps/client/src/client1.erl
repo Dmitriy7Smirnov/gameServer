@@ -1,7 +1,7 @@
 %% @author: Dima
 %% @date: 08.08.2019
 
--module(client).
+-module(client1).
 
 %% Include files
 
@@ -13,8 +13,7 @@
     login/2,
     send_text/1,
     stop/0,
-    client/2,
-    start_battle/1
+    client/2
 ]).
 
 start() ->
@@ -23,22 +22,18 @@ start() ->
 
 start(Host, Port) ->
     Pid = spawn(?MODULE, client, [Host, Port]),
-    register(client, Pid).
+    register(client1, Pid).
 
 login(Username, Password) ->
-    client ! {login, Username, Password},
-    ok.
-
-start_battle(Arms) ->
-    client ! {start_battle, Arms},
+    client1 ! {login, Username, Password},
     ok.
 
 send_text(Text) ->
-    client ! {text, Text},
+    client1 ! {text, Text},
     ok.
 
 stop() ->
-    client ! stop,
+    client1 ! stop,
     ok.
 
 client(Host, Port) ->
@@ -55,13 +50,6 @@ loop(Socket) ->
             PackedPassword = proto:pack(string, Password),
             send(Socket, <<ServiceByte/binary, SubserviceByte/binary, PackedUsername/binary, PackedPassword/binary>>),
             io:format("CLIENT: trying to login as \"~s\" with password \"~s\"~n", [Username, Password]),
-            loop(Socket);
-        {start_battle, Arms} ->
-            ServiceByte = proto:pack(uint8, 130),
-            SubserviceByte = proto:pack(uint8, 2),
-            PackedArms = proto:pack(string, Arms),
-            send(Socket, <<ServiceByte/binary, SubserviceByte/binary, PackedArms/binary>>),
-            io:format("CLIENT: sending start_battle with arms = ~p~n", [Arms]),    
             loop(Socket);
         {text, Text} ->
             send(Socket, proto:pack(string, Text)),
@@ -86,3 +74,9 @@ send(Socket, Data) ->
     DataSize = byte_size(Data),
     Packet = <<DataSize:16/integer, Data/binary>>,
     gen_tcp:send(Socket, Packet).
+
+
+
+
+
+

@@ -22,6 +22,7 @@ start(_StartType, _StartArgs) ->
 %        Error ->
 %            Error
 %    end.
+spawn(client1, start, []),
 Pid = spawn(client, start, []),
 {ok, Pid}.
 
