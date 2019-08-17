@@ -8,37 +8,37 @@
 %% Exported Functions
 
 -export([
-    start/0,
-    start/2,
-    login/2,
-    send_text/1,
-    stop/0,
+    start/1,
+    start/3,
+    login/3,
+    send_text/2,
+    stop/1,
     client/2,
-    start_battle/1
+    start_battle/2
 ]).
 
-start() ->
-    start("localhost", 1234),
+start(ClientName) ->
+    start("localhost", 1234, ClientName),
     timer:sleep(infinity).
 
-start(Host, Port) ->
+start(Host, Port, ClientName) ->
     Pid = spawn(?MODULE, client, [Host, Port]),
-    register(client, Pid).
+    register(ClientName, Pid).
 
-login(Username, Password) ->
-    client ! {login, Username, Password},
+login(ClientName, Username, Password) ->
+    ClientName ! {login, Username, Password},
     ok.
 
-start_battle(Arms) ->
-    client ! {start_battle, Arms},
+start_battle(ClientName, Arms) ->
+    ClientName ! {start_battle, Arms},
     ok.
 
-send_text(Text) ->
-    client ! {text, Text},
+send_text(ClientName, Text) ->
+    ClientName ! {text, Text},
     ok.
 
-stop() ->
-    client ! stop,
+stop(ClientName) ->
+    ClientName ! stop,
     ok.
 
 client(Host, Port) ->

@@ -1,8 +1,9 @@
 %% @author: Dima
 %% @date: 08.08.2019
-
 -module(server).
 
+-include_lib("protocol/include/proto.hrl").
+    
 %% Include files
 -record(player_db_entry, {
     id,
@@ -112,7 +113,7 @@ handle_connection(#player{socket = Socket, id = Id} = PlayerState) ->
             {ServiceByte, Rest} = proto:parse(uint8, Data),
             {SubserviceByte, Rest1} = proto:parse(uint8, Rest),
             {Text, _Rest2} = proto:parse(string, Rest1),
-            analize(ServiceByte, SubserviceByte, Text),
+            analyze(ServiceByte, SubserviceByte, Text),
             %{Text, _} = proto:parse(string, Data),
             io:format("SERVER: message from client: ~s~n", [Text]),
             Reply = proto:pack(string, <<"RECV OK">>),
@@ -125,10 +126,11 @@ handle_connection(#player{socket = Socket, id = Id} = PlayerState) ->
     end.
 
 
-analize(130, 2, Data) ->
-    io:format("player wants to start battle with arms = ~p~n", [Data]),
+analyze(?service_lobby, ?cs_find_opponent, Arms) ->
+    io:format("player wants to start battle with arms = ~p~n", [Arms]),
+    manager ! {self()},
     4;
-analize(_, _, _) ->
+analyze(_, _, _) ->
     io:format("unknown info", []),
     5.
 
