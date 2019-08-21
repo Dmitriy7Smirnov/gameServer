@@ -5,19 +5,14 @@
 
 %% Include files
 
+-include_lib("protocol/include/proto.hrl").
+
 %% Exported Functions
 
 -export([
     parse/2,
     pack/2
 ]).
-
--record(testrecord,
-    {
-        id :: integer(),
-        name :: string()
-    }
-).
 
       
 
@@ -31,10 +26,11 @@
 -spec parse(Type :: atom(), Data :: binary()) ->
     {Value :: any(), Rest :: binary()}.
 
-
-parse(testrecord, <<Id:8/little-unsigned-integer-unit:1, 
-                    Length:4/little-unsigned-integer-unit:8, String:Length/binary, Rest/binary>>) ->
-                        {#testrecord{id = Id, name = String}, Rest};
+                    
+parse(player, <<Hp:8/little-unsigned-integer-unit:1, HpMax:8/little-unsigned-integer-unit:1,
+    Id:8/little-unsigned-integer-unit:1, Length:4/little-unsigned-integer-unit:8, Username:Length/binary,
+    Rest/binary>>) ->
+        {#player{hp = Hp, hp_max = HpMax, id = Id, username = Username}, Rest};                     
                     
 parse({list, Type}, <<Length:4/little-unsigned-integer-unit:8, List:Length/binary, Rest/binary>>) ->
     ParsedList = parse(list, Type, List, []),
@@ -47,7 +43,9 @@ parse(list, Type, Binary, Acc) ->
      
 
 
-pack(testrecord, #testrecord{id = Id, name = Name}) -> <<(pack(uint8, Id))/binary,(pack(string, Name))/binary>>;
+pack(player, #player{hp = Hp, hp_max = HpMax, id = Id, username = Username}) -> <<(proto:pack(uint8, Hp))/binary,
+    (proto:pack(uint8, HpMax))/binary, (proto:pack(uint8, Id))/binary, (proto:pack(string, Username))/binary>>;
+
 pack({list, Type}, List) -> 
     LengthInBytes = length(List)*maps:get(Type, type_size_map()),
     PackedItems = lists:foldl(fun(Item, Acc) -> <<Acc/binary, (proto:pack(Type, Item))/binary>> end, <<>>, List), 

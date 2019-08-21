@@ -1,8 +1,8 @@
-{application, clientapp, [
+{application, client, [
     {description,"Description"},
     {vsn,"1.0"},
-    {modules,[]},
+    {modules,[client_sup,client_app,client]},
     {registered,[]},
     {applications,[kernel,stdlib]},
-	{mod,{clientapp,[]}} 
+	{mod,{client_app,[]}} 
 ]}.

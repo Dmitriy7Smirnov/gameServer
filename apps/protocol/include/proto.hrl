@@ -10,6 +10,19 @@
 
 -define(service_match, 3).
 -define(cs_start_battle, 1).
--define(cs_start_battle_reply, 2).
+-define(sc_start_battle_reply, 2).
 -define(cs_attack, 3).
--define(cs_attack_reply, 4).
+-define(sc_attack_reply, 4).
+
+-define(error, 0).
+-define(ok, 1).
+
+-record(player, {
+    hp = 0,
+    hp_max = 0,
+    id = 0,
+    username = list_to_binary("unknown"),
+    socket,
+    pid,
+    opponent_pid
+}).

@@ -7,8 +7,8 @@
 
 %% Application callbacks
 -export([
-	start/2, 
-	stop/1
+    start/2, 
+    stop/1
 ]).
 
 %%%===================================================================
@@ -22,8 +22,11 @@ start(_StartType, _StartArgs) ->
 %        Error ->
 %            Error
 %    end.
-    spawn(client, start, [client]),
-    Pid = spawn(client, start, [client1]),
+    spawn(client, start, [client1]),
+    spawn(client, start, [client2]),
+    spawn(client, start, [client3]),
+    spawn(client, start, [client4]),    
+    Pid = spawn(client, start, [client5]),
     {ok, Pid}.
 
 stop(_State) ->
