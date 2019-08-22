@@ -83,16 +83,16 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
                 {ok, Whom} ->
                     ImpactForce = fighter_fun:get_impact_force(),
                     io:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
-                        [Who#player.username, Whom#player.username, Who#player.hp, ImpactForce]),
+                        [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),
                     MsgForFirstOpponent = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
-                        [Who#player.username, Whom#player.username, Who#player.hp, ImpactForce]),
+                        [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),
                     MsgForSecondOpponent = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
-                        [Who#player.username, Whom#player.username, Who#player.hp, ImpactForce]),    
+                        [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),    
                     Whom1 = Whom#player{hp = Whom#player.hp - ImpactForce},
                     send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForFirstOpponent, Who, Whom1),
-                    send_reply(Whom#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForSecondOpponent, Whom1, Who),
+                    send_reply(Whom1#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForSecondOpponent, Whom1, Who),
                     manager(LobbyState, MatchState#match{fighter1 = Who, fighter2 = Whom1});
-                {error, Reason} ->
+                {error, _Reason} ->
                     io:format("SERVER: you haven't opponent yet", [])
             end,
             manager(LobbyState, MatchState)
@@ -100,8 +100,8 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
         200 -> manager(LobbyState, MatchState)
     end.
 
-get_opponent(Fighter1, Fighter2, Opponent) when Fighter2 =:= Opponent -> {ok, Fighter1};
-get_opponent(Fighter1, Fighter2, Opponent) when Fighter1 =:= Opponent -> {ok, Fighter2};
+get_opponent(Fighter1, Fighter2, Opponent) when Fighter2#player.id =:= Opponent#player.id -> {ok, Fighter1};
+get_opponent(Fighter1, Fighter2, Opponent) when Fighter1#player.id =:= Opponent#player.id -> {ok, Fighter2};
 get_opponent(_Fighter1, _Fighter2, _Opponent) -> {error, opponent_not_found}.
 
 accept(Id, ListenSocket) ->

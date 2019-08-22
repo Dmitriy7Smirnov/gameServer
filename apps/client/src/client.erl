@@ -119,11 +119,11 @@ analyze(?service_auth, ?sc_login_reply, ?ok, Msg, #player{username = Name, hp = 
 analyze(?service_lobby, ?sc_find_opponent_reply, ?ok, Msg, _Player = #player{username = Name, hp = Hp, hp_max = HpMax},
     _Opponent = #player{username = Name1, hp = Hp1, hp_max = HpMax1}) ->
     io:format("CLIENT: got message: ~s~n", [Msg]),
-    io:format("CLIENT: you name = ~s, your hp_max = ~p, your hp = ~p found opponent name = ~s, hp_max = ~p, hp = ~p~n", 
+    io:format("CLIENT: your name = ~s, your hp_max = ~p, your hp = ~p found opponent name = ~s, hp_max = ~p, hp = ~p~n", 
         [Name, HpMax, Hp, Name1, HpMax1, Hp1]);
 
 analyze(?service_match, ?sc_attack_reply, ?ok, Msg, _Player = #player{username = Name, hp = Hp, hp_max = HpMax}, 
     _Opponent = #player{username = Name1, hp = Hp1, hp_max = HpMax1}) ->
     io:format("CLIENT: got message: ~s~n", [Msg]),
-    io:format("CLIENT: you name = ~s, your hp_max = ~p, your hp = ~p, your opponent name = ~s, hp_max = ~p, hp = ~p~n", 
+    io:format("CLIENT: your name = ~s, your hp_max = ~p, your hp = ~p, your opponent name = ~s, hp_max = ~p, hp = ~p~n", 
         [Name, HpMax, Hp, Name1, HpMax1, Hp1]).
