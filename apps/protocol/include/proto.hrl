@@ -17,6 +17,8 @@
 -define(error, 0).
 -define(ok, 1).
 
+-define(time_between_attacks, 20).
+
 -record(player, {
     hp = 0,
     hp_max = 0,
@@ -24,5 +26,6 @@
     username = list_to_binary("unknown"),
     socket,
     pid,
-    opponent_pid
+    opponent_pid,
+    time
 }).

@@ -25,7 +25,8 @@
     start/0,
     start/1,
     server/1,
-    accept/2
+    accept/2,
+    get_time/0
 ]).
 
 start() ->
@@ -79,36 +80,37 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
                     manager(LobbyState#lobby{players = Opponents1}, MatchState1)
             end;
         {attack, Who} ->
-            case get_opponent(Fighter1, Fighter2, Who) of 
-                {ok, Whom} ->
+            case get_opponents(Fighter1, Fighter2, Who) of 
+                {ok, Who1, Whom} ->
                     ImpactForce = fighter_fun:get_impact_force(),
                     io:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
                         [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),
-                    MsgForFirstOpponent = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
+                    MsgForWho = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
                         [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),
-                    MsgForSecondOpponent = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
+                    MsgForWhom = io_lib:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
                         [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),    
                     Whom1 = Whom#player{hp = Whom#player.hp - ImpactForce},
-                    send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForFirstOpponent, Who, Whom1),
-                    send_reply(Whom1#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForSecondOpponent, Whom1, Who),
-                    manager(LobbyState, MatchState#match{fighter1 = Who, fighter2 = Whom1});
+                    send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForWho, Who1, Whom1),
+                    send_reply(Whom1#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForWhom, Whom1, Who1),
+                    manager(LobbyState, MatchState#match{fighter1 = Who1, fighter2 = Whom1});
                 {error, _Reason} ->
-                    io:format("SERVER: you haven't opponent yet", [])
+                    Reply = io_lib:format("SERVER: you haven't opponent yet", []),
+                    send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?error, Reply, Who, #player{})
             end,
             manager(LobbyState, MatchState)
     after
         200 -> manager(LobbyState, MatchState)
     end.
 
-get_opponent(Fighter1, Fighter2, Opponent) when Fighter2#player.id =:= Opponent#player.id -> {ok, Fighter1};
-get_opponent(Fighter1, Fighter2, Opponent) when Fighter1#player.id =:= Opponent#player.id -> {ok, Fighter2};
-get_opponent(_Fighter1, _Fighter2, _Opponent) -> {error, opponent_not_found}.
+get_opponents(Fighter1, Fighter2, Opponent) when Fighter2#player.id =:= Opponent#player.id -> {ok, Fighter2, Fighter1};
+get_opponents(Fighter1, Fighter2, Opponent) when Fighter1#player.id =:= Opponent#player.id -> {ok, Fighter1, Fighter2};
+get_opponents(_Fighter1, _Fighter2, _Opponent) -> {error, opponent_not_found}.
 
 accept(Id, ListenSocket) ->
     io:format("SERVER: socket #~p waiting for client~n", [Id]),
     {ok, Socket} = gen_tcp:accept(ListenSocket),
     io:format("SERVER: socket #~p, session started~n", [Id]),
-    handle_connection(#player{socket = Socket, pid = self()}),
+    handle_connection(#player{socket = Socket, pid = self(), time = 0}),
     % io:format("SERVER: socket #~p, session closed~n", [Id]),
     accept(Id, ListenSocket).
 
@@ -207,9 +209,16 @@ analyze(?service_lobby, ?cs_find_opponent, Arms, #player{socket = _Socket, id = 
             {error, timeout}
     end,
     {ok, PlayerState};
-analyze(?service_match, ?cs_attack, _Arms, #player{socket = _Socket, id = _Id} = PlayerState) ->
-    manager ! {attack, PlayerState}, 
-    {ok, PlayerState};
+analyze(?service_match, ?cs_attack, _Arms, #player{socket = Socket, id = _Id, time = Time} = PlayerState) ->
+    CurrTime = get_time(),
+    Delta = CurrTime - Time,
+    if Delta < ?time_between_attacks ->
+        MatchError = io_lib:format("SERVER: DELTA TIME: ~p IS LESS THEN ~p~n", [Delta, ?time_between_attacks]),
+        send_reply(Socket, ?service_match, ?sc_attack_reply, ?error, MatchError, PlayerState, #player{});
+    true ->
+    manager ! {attack, PlayerState}
+    end,
+    {ok, PlayerState#player{time = CurrTime}};
 analyze(_, _, _, _) ->
     io:format("unknown info", []),
     {error, "unknown info ~n"}.
@@ -250,3 +259,5 @@ authenticate(Username, Password) ->
         0 -> {error, invalid_username}
     end.
 
+get_time() ->
+    erlang:system_time(second).

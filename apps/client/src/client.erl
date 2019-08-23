@@ -114,7 +114,7 @@ analyze(_ServiceByte, _SubserviceByte, ?error, Msg, _Player, _Opponent) ->
     io:format("CLIENT: got error message: ~s~n", [Msg]);
 
 analyze(?service_auth, ?sc_login_reply, ?ok, Msg, #player{username = Name, hp = Hp, hp_max = HpMax}, _Opponent) ->
-    io:format("CLIENT: got message: ~s~n, your name = ~s, your hp_max = ~p, your hp = ~p ~n", [Msg, Name, Hp, HpMax]);
+    io:format("CLIENT: got message: ~s,~nyour name = ~s, your hp_max = ~p, your hp = ~p ~n", [Msg, Name, Hp, HpMax]);
 
 analyze(?service_lobby, ?sc_find_opponent_reply, ?ok, Msg, _Player = #player{username = Name, hp = Hp, hp_max = HpMax},
     _Opponent = #player{username = Name1, hp = Hp1, hp_max = HpMax1}) ->
