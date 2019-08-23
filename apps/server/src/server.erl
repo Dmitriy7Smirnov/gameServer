@@ -16,8 +16,7 @@
 }).
 
 -record(match, {
-    fighter1,
-    fighter2
+    fighters = []
 }).
 
 %% Exported Functions
@@ -48,7 +47,7 @@ server(Port) ->
     timer:sleep(infinity),
     ok.
 
-manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = Fighter1, fighter2 = Fighter2}) ->
+manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighters = Fighters}) ->
     receive
         {add, Player} -> 
             Players1 = Player ++ Players, 
@@ -70,8 +69,11 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
                 _ ->
                     Opponents = [Opponent || Opponent <- Players, Opponent#player.id  =/= Id],
                     Opponent2 = fighter_fun:get_enemy(Opponents),
-                    Opponents1 = [Opponent || Opponent <- Players, Opponent#player.id  =/= Opponent2#player.id],
-                    MatchState1 = MatchState#match{fighter1 = Opponent1, fighter2 = Opponent2},
+                    Opponents1 = [Opponent || Opponent <- Opponents, Opponent#player.id  =/= Opponent2#player.id],
+                    NewPairOfFighter = {Opponent1, Opponent2},
+                    Fighters1 = [NewPairOfFighter] ++ Fighters,
+                    io:format("FROM FIND OPPONENT: length of Fighterslist = ~p ~n", [length(Fighters1)]),
+                    MatchState1 = MatchState#match{fighters = Fighters1},
                     MsgForFirstOpponent = io_lib:format("~s, opponent for you was found: ~s, you can start attack", [Name, Opponent2#player.username]),
                     MsgForSecondOpponent = io_lib:format("~s, opponent for you was found: ~s, you can start attack", [Opponent2#player.username, Name]),
                     send_reply(Socket, ?service_lobby, ?sc_find_opponent_reply, ?ok, MsgForFirstOpponent, Opponent1, Opponent2),
@@ -80,8 +82,10 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
                     manager(LobbyState#lobby{players = Opponents1}, MatchState1)
             end;
         {attack, Who} ->
-            case get_opponents(Fighter1, Fighter2, Who) of 
+            case get_opponents(Fighters, Who) of 
                 {ok, Who1, Whom} ->
+                    Fighters1 = lists:delete({Who1, Whom}, Fighters),
+                    Fighters2 = lists:delete({Whom, Who1}, Fighters1),
                     ImpactForce = fighter_fun:get_impact_force(),
                     io:format("SERVER: ~s attacked ~s with hp = ~p and impact force = ~p ~n", 
                         [Who#player.username, Whom#player.username, Whom#player.hp, ImpactForce]),
@@ -92,7 +96,8 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
                     Whom1 = Whom#player{hp = Whom#player.hp - ImpactForce},
                     send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForWho, Who1, Whom1),
                     send_reply(Whom1#player.socket, ?service_match, ?sc_attack_reply, ?ok, MsgForWhom, Whom1, Who1),
-                    manager(LobbyState, MatchState#match{fighter1 = Who1, fighter2 = Whom1});
+                    Fighters3 = [{Who1, Whom1}] ++ Fighters2,
+                    manager(LobbyState, MatchState#match{fighters = Fighters3});
                 {error, _Reason} ->
                     Reply = io_lib:format("SERVER: you haven't opponent yet", []),
                     send_reply(Who#player.socket, ?service_match, ?sc_attack_reply, ?error, Reply, Who, #player{})
@@ -102,9 +107,21 @@ manager(LobbyState = #lobby{players = Players}, MatchState = #match{fighter1 = F
         200 -> manager(LobbyState, MatchState)
     end.
 
-get_opponents(Fighter1, Fighter2, Opponent) when Fighter2#player.id =:= Opponent#player.id -> {ok, Fighter2, Fighter1};
-get_opponents(Fighter1, Fighter2, Opponent) when Fighter1#player.id =:= Opponent#player.id -> {ok, Fighter1, Fighter2};
-get_opponents(_Fighter1, _Fighter2, _Opponent) -> {error, opponent_not_found}.
+get_opponents(Fighters, Opponent) ->
+    io:format("length of Fighterslist = ~p ~n", [length(Fighters)]),
+    F = fun({Fighter1, _Fighter2}) when Fighter1#player.id =:= Opponent#player.id -> true;
+           ({_Fighter1, Fighter2}) when Fighter2#player.id =:= Opponent#player.id -> true;
+           ({_, _}) -> false
+        end,   
+        Opponents = lists:nth(1, lists:filter(F, Fighters)),
+        get_opponents1(Opponents, Opponent).
+        
+
+get_opponents1({Fighter1, Fighter2}, Opponent) when Fighter2#player.id =:= Opponent#player.id -> {ok, Fighter2, Fighter1};
+get_opponents1({Fighter1, Fighter2}, Opponent) when Fighter1#player.id =:= Opponent#player.id -> {ok, Fighter1, Fighter2};
+get_opponents1({_, _}, _Opponent) -> {error, opponent_not_found}.
+
+
 
 accept(Id, ListenSocket) ->
     io:format("SERVER: socket #~p waiting for client~n", [Id]),
